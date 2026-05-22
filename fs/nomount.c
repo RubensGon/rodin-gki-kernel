@@ -1,6 +1,7 @@
 #include <linux/init.h>
 #include <linux/namei.h>
 #include <linux/slab.h>
+#include <linux/cred.h>
 #include <linux/statfs.h>
 #include <linux/fs_struct.h>
 #include "nomount.h"
@@ -9,6 +10,8 @@ static struct kmem_cache *nm_rule_cachep, *nm_dir_cachep, *nm_child_cachep, *nm_
 const loff_t nomount_magic_pos = 0x7E000000;
 atomic_t nm_active_rules = ATOMIC_INIT(0);
 atomic_t nm_active_dirs = ATOMIC_INIT(0);
+DEFINE_STATIC_KEY_FALSE(nomount_active_rules);
+DEFINE_STATIC_KEY_FALSE(nomount_active_dirs);
 
 /* logs */
 #define nm_debug(fmt, ...) printk(KERN_DEBUG "NoMount: [DEBUG] " fmt, ##__VA_ARGS__)
@@ -45,6 +48,7 @@ bool nomount_is_uid_blocked(uid_t uid) {
  */
 static __always_inline bool __nomount_should_skip(void) {
     if (!static_branch_unlikely(&nomount_active_rules)) return true;
+    if (unlikely(!in_task() || in_nmi() || oops_in_progress)) return true;
     if (unlikely(current->flags & (PF_KTHREAD | PF_EXITING))) return true;
     if (unlikely(!hash_empty(nomount_uid_ht))) {
         if (unlikely(nomount_is_uid_blocked(current_uid().val))) return true;
@@ -300,13 +304,21 @@ int nomount_allow_access(struct inode *inode, int mask)
 struct filename *nomount_getname_hook(struct filename *name)
 {
     struct nomount_rule *rule;
-    const char *check_name, *last_slash, *s = name->name;
-    size_t b_len, r_len, name_len = strlen(s);
     char *abs_path = NULL;
+    const char *check_name, *s, *last_slash;
+    size_t name_len, b_len, r_len;
     bool basename_match = false;
     u32 b_hash;
 
-    if (unlikely(__nomount_should_skip() || name_len <= 1))
+    if (unlikely(__nomount_should_skip()))
+        return name;
+
+    if (unlikely(IS_ERR_OR_NULL(name) || !name->name))
+        return name;
+
+    s = name->name;
+    name_len = strlen(s);
+    if (unlikely(name_len == 1 && s[0] == '/'))
         return name;
 
     last_slash = strrchr(s, '/');
@@ -650,6 +662,8 @@ static int nomount_generate_virtual_topology(struct nomount_rule *rule)
             if (unlikely(!irule)) {
                 err = -ENOMEM; break;
             }
+
+            irule = pending_rules[p_count - 1];
 
             INIT_LIST_HEAD(&irule->list);
             INIT_HLIST_NODE(&irule->v_ino_node);

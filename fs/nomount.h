@@ -27,8 +27,6 @@ static DEFINE_HASHTABLE(nomount_uid_ht,            NOMOUNT_UID_HASH_BITS);
 static LIST_HEAD(nomount_rules_list);
 static DEFINE_MUTEX(nomount_write_mutex);
 static DECLARE_RWSEM(nomount_dirs_rwsem);
-DEFINE_STATIC_KEY_FALSE(nomount_active_rules);
-DEFINE_STATIC_KEY_FALSE(nomount_active_dirs);
 
 struct nomount_rule {
     struct list_head list;
