@@ -83,6 +83,7 @@ EXPORT_SYMBOL(wrap_directory_iterator);
 	unsafe_copy_to_user(dst, src, len, label);		\
 } while (0)
 
+<<<<<<< HEAD
 #ifdef CONFIG_NOMOUNT
 extern void nomount_vfs_inject_dir(struct file *file, struct dir_context *ctx);
 extern bool nomount_should_skip(void);
@@ -106,6 +107,8 @@ do {                                                                     \
     }                                                                    \
 } while (0)
 #endif
+=======
+>>>>>>> parent of 6426822cfc6f (nomount by maxsteeel)
 
 int iterate_dir(struct file *file, struct dir_context *ctx)
 {
@@ -126,11 +129,7 @@ int iterate_dir(struct file *file, struct dir_context *ctx)
 	res = -ENOENT;
 	if (!IS_DEADDIR(inode)) {
 		ctx->pos = file->f_pos;
-#ifdef CONFIG_NOMOUNT
-		nomount_handle_iterate_dir(file, ctx, res);
-#else
 		res = file->f_op->iterate_shared(file, ctx);
-#endif
 		file->f_pos = ctx->pos;
 		fsnotify_access(file);
 		file_accessed(file);
