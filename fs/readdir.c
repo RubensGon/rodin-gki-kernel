@@ -83,32 +83,6 @@ EXPORT_SYMBOL(wrap_directory_iterator);
 	unsafe_copy_to_user(dst, src, len, label);		\
 } while (0)
 
-<<<<<<< HEAD
-#ifdef CONFIG_NOMOUNT
-extern void nomount_vfs_inject_dir(struct file *file, struct dir_context *ctx);
-extern bool nomount_should_skip(void);
-extern const loff_t nomount_magic_pos;
-
-#define nomount_handle_iterate_dir(file, ctx, res)                       \
-do {                                                                     \
-    loff_t _old_pos = (ctx)->pos;                                        \
-    bool _nm_skip = nomount_should_skip();                               \
-                                                                         \
-    if ((ctx)->pos >= nomount_magic_pos && !_nm_skip) {                  \
-        (res) = 0;                                                       \
-    } else {                                                             \
-        (res) = (file)->f_op->iterate_shared((file), (ctx));                    \
-    }                                                                    \
-                                                                         \
-    if ((res) >= 0 && !_nm_skip) {                                       \
-        if ((ctx)->pos == _old_pos || (ctx)->pos >= nomount_magic_pos) { \
-            nomount_vfs_inject_dir((file), (ctx));                       \
-        }                                                                \
-    }                                                                    \
-} while (0)
-#endif
-=======
->>>>>>> parent of 6426822cfc6f (nomount by maxsteeel)
 
 int iterate_dir(struct file *file, struct dir_context *ctx)
 {
